@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, List, Annotated
 from uuid import UUID, uuid4
 from datetime import datetime
 from pydantic import BaseModel, Field
 
+from .dining_location import DiningLocationBase
 
 class MealPlanBase(BaseModel):
     meal_plan_id: UUID = Field(
@@ -37,6 +38,21 @@ class MealPlanBase(BaseModel):
         description="Meal plan official end date.",
         json_schema_extra={"example": "2026-09-14T00:00:00Z"},
     )
+    
+    # Embed dining location (each with persistent ID)
+    dining_locations: List[DiningLocationBase] = Field(
+        default_factory=list,
+        description="Dining Location linked to this meal plan (each carries a persistent Dining Location ID).",
+        json_schema_extra={
+            "example": [
+                {
+                    "dining_location_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                    "name": "Grace Dodge",
+                    "capacity": "200",
+                }
+            ]
+        },
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -48,6 +64,13 @@ class MealPlanBase(BaseModel):
                     "cost": "1000",
                     "start_date": "2025-09-14T00:00:00Z",
                     "end_date": "2026-09-14T00:00:00Z",
+                    "dining_locations": [
+                        {
+                            "dining_location_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "name": "Grace Dodge",
+                            "capacity": "200",
+                        }
+                    ],
                 }
             ]
         }
@@ -66,6 +89,13 @@ class MealPlanCreate(MealPlanBase):
                     "cost": "800",
                     "start_date": "2025-08-15T00:00:00Z",
                     "end_date": "2026-08-15T00:00:00Z",
+                    "dining_locations": [
+                        {
+                            "dining_location_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                            "name": "Grace Dodge",
+                            "capacity": "200",
+                        }
+                    ],
                 }
             ]
         }
@@ -99,6 +129,19 @@ class MealPlanUpdate(BaseModel):
         description="Meal plan official end date.",
         json_schema_extra={"example": "09/14/2026"},
     )
+    dining_locations: Optional[List[DiningLocationBase]] = Field(
+        None,
+        description="Replace the entire set of dining locations with this list.",
+        json_schema_extra={
+            "example": [
+                {
+                        "dining_location_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                        "name": "Grace Dodge",
+                        "capacity": "200",
+                }
+            ]
+        },
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -109,6 +152,13 @@ class MealPlanUpdate(BaseModel):
                   "cost": "800",
                   "start_date": "2025-08-15T00:00:00Z",
                   "end_date": "2026-08-15T00:00:00Z",
+                    "dining_locations": [
+                        {
+                            "dining_location_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                            "name": "Grace Dodge",
+                            "capacity": "200",
+                        }
+                    ],
                 },
                 {"cost": "500"},
             ]
@@ -117,6 +167,12 @@ class MealPlanUpdate(BaseModel):
 
 
 class MealPlanRead(MealPlanBase):
+    """Server representation returned to clients."""
+    id: UUID = Field(
+        default_factory=uuid4,
+        description="Server-generated Person ID.",
+        json_schema_extra={"example": "99999999-9999-4999-8999-999999999999"},
+    )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         description="Creation timestamp (UTC).",
@@ -138,6 +194,13 @@ class MealPlanRead(MealPlanBase):
                     "cost": "1000",
                     "start_date": "2025-08-15T00:00:00Z",
                     "end_date": "2026-08-15T00:00:00Z",
+                    "dining_locations": [
+                        {
+                            "dining_location_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                            "name": "Grace Dodge",
+                            "capacity": "200",
+                        }
+                    ],
                     "created_at": "2025-08-15T10:20:30Z",
                     "updated_at": "2025-08-16T12:00:00Z",
                 }

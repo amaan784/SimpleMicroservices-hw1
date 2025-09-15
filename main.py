@@ -15,6 +15,7 @@ from models.person import PersonCreate, PersonRead, PersonUpdate
 from models.address import AddressCreate, AddressRead, AddressUpdate
 from models.health import Health
 from models.meal_plan import MealPlanCreate, MealPlanRead, MealPlanUpdate   
+from models.dining_location import DiningLocationCreate, DiningLocationRead, DiningLocationUpdate
 
 port = int(os.environ.get("FASTAPIPORT", 8000))
 
@@ -24,10 +25,12 @@ port = int(os.environ.get("FASTAPIPORT", 8000))
 persons: Dict[UUID, PersonRead] = {}
 addresses: Dict[UUID, AddressRead] = {}
 meal_plans: Dict[UUID, MealPlanRead] = {}
+dining_locations: Dict[UUID, DiningLocationRead] = {}
 
+# -----------------------------------------------------------------------------
 app = FastAPI(
     title="Person, Address, Meal Plan API",
-    description="Demo FastAPI app using Pydantic v2 models for Person, Address, Meal Plan",
+    description="Demo FastAPI app using Pydantic v2 models for Person, Address, Meal Plan, Dining Location",
     version="0.1.0",
 )
 
@@ -172,10 +175,12 @@ def update_person(person_id: UUID, update: PersonUpdate):
 
 @app.post("/mealplan", response_model=MealPlanRead, status_code=201)
 def create_meal_plan(meal_plan: MealPlanCreate):
-    if meal_plan.meal_plan_id in meal_plans:
+    meal_plan_read = MealPlanRead(**meal_plan.model_dump())
+    if meal_plan_read.meal_plan_id in meal_plans:
         raise HTTPException(status_code=400, detail="Meal Plan with this ID already exists")
-    meal_plans[meal_plan.meal_plan_id] = MealPlanRead(**meal_plan.model_dump())
-    return meal_plans[meal_plan.meal_plan_id]
+    meal_plans[meal_plan_read.meal_plan_id] = meal_plan_read
+    return meal_plan_read
+
 
 @app.get("/mealplan", response_model=List[MealPlanRead])
 def list_meal_plans(
@@ -184,8 +189,9 @@ def list_meal_plans(
     cost: Optional[float] = Query(None, description="Filter by meal plan cost in USD"),
     start_date: Optional[datetime] = Query(None, description="Filter by start date"),
     end_date: Optional[datetime] = Query(None, description="Filter by end date"),
-    ):
-
+    dining_location_name: Optional[str] = Query(None, description="Filter by name of at least one dining location"),
+    dining_location_capacity: Optional[int] = Query(None, description="Filter by capacity of at least one dining location"),
+):
     results = list(meal_plans.values())
 
     if name is not None:
@@ -199,13 +205,21 @@ def list_meal_plans(
     if end_date is not None:
         results = [m for m in results if m.end_date == end_date]
 
+    # nested dining location filtering 
+    if dining_location_name is not None:
+        results = [m for m in results if any(dl.name == dining_location_name for dl in m.dining_locations)]
+    if dining_location_capacity is not None:
+        results = [m for m in results if any(dl.capacity == dining_location_capacity for dl in m.dining_locations)]
+
     return results
+
 
 @app.get("/mealplan/{meal_plan_id}", response_model=MealPlanRead)
 def get_meal_plan(meal_plan_id: UUID):
     if meal_plan_id not in meal_plans:
         raise HTTPException(status_code=404, detail="Meal Plan not found")
     return meal_plans[meal_plan_id]
+
 
 @app.patch("/mealplan/{meal_plan_id}", response_model=MealPlanRead)
 def update_meal_plan(meal_plan_id: UUID, update: MealPlanUpdate):
@@ -217,11 +231,53 @@ def update_meal_plan(meal_plan_id: UUID, update: MealPlanUpdate):
     return meal_plans[meal_plan_id]
 
 # -----------------------------------------------------------------------------
+# Dining Location endpoints
+# -----------------------------------------------------------------------------
+
+@app.post("/dining-location", response_model=DiningLocationRead, status_code=201)
+def create_dining_location(dining_location: DiningLocationCreate):
+    if dining_location.dining_location_id in dining_locations:
+        raise HTTPException(status_code=400, detail="Dining Location with this ID already exists")
+    dining_locations[dining_location.dining_location_id] = DiningLocationRead(**dining_location.model_dump())
+    return dining_locations[dining_location.dining_location_id]
+
+
+@app.get("/dining-location", response_model=List[DiningLocationRead])
+def list_dining_locations(
+    name: Optional[str] = Query(None, description="Filter by dining location name"),
+    capacity: Optional[int] = Query(None, description="Filter by dining location capacity"),    
+    ):
+    results = list(dining_locations.values())
+
+    if name is not None:
+        results = [d for d in results if d.name == name]
+    if capacity is not None:
+        results = [d for d in results if d.capacity == capacity]
+
+    return results
+
+@app.get("/dining-location/{dining_location_id}", response_model=DiningLocationRead)
+def get_dining_location(dining_location_id: UUID):
+    if dining_location_id not in dining_locations:
+        raise HTTPException(status_code=404, detail="Dining Location not found")
+    return dining_locations[dining_location_id]
+
+@app.patch("/dining-location/{dining_location_id}", response_model=DiningLocationRead)
+def update_dining_location(dining_location_id: UUID, update: DiningLocationUpdate):
+    if dining_location_id not in dining_locations:
+        raise HTTPException(status_code=404, detail="Dining Location not found")
+    stored = dining_locations[dining_location_id].model_dump()
+    stored.update(update.model_dump(exclude_unset=True))
+    dining_locations[dining_location_id] = DiningLocationRead(**stored)
+    return dining_locations[dining_location_id]
+
+
+# -----------------------------------------------------------------------------
 # Root
 # -----------------------------------------------------------------------------
 @app.get("/")
 def root():
-    return {"message": "Welcome to the Person/Address/Meal Plan API. See /docs for OpenAPI UI."}
+    return {"message": "Welcome to the Person/Address/Meal Plan/Dining Location API. See /docs for OpenAPI UI."}
 
 # -----------------------------------------------------------------------------
 # Entrypoint for `python main.py`
