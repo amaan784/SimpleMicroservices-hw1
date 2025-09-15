@@ -14,6 +14,7 @@ from typing import Optional
 from models.person import PersonCreate, PersonRead, PersonUpdate
 from models.address import AddressCreate, AddressRead, AddressUpdate
 from models.health import Health
+from models.meal_plan import MealPlanCreate, MealPlanRead, MealPlanUpdate   
 
 port = int(os.environ.get("FASTAPIPORT", 8000))
 
@@ -22,15 +23,16 @@ port = int(os.environ.get("FASTAPIPORT", 8000))
 # -----------------------------------------------------------------------------
 persons: Dict[UUID, PersonRead] = {}
 addresses: Dict[UUID, AddressRead] = {}
+meal_plans: Dict[UUID, MealPlanRead] = {}
 
 app = FastAPI(
-    title="Person/Address API",
-    description="Demo FastAPI app using Pydantic v2 models for Person and Address",
+    title="Person, Address, Meal Plan API",
+    description="Demo FastAPI app using Pydantic v2 models for Person, Address, Meal Plan",
     version="0.1.0",
 )
 
 # -----------------------------------------------------------------------------
-# Address endpoints
+# Health endpoints
 # -----------------------------------------------------------------------------
 
 def make_health(echo: Optional[str], path_echo: Optional[str]=None) -> Health:
@@ -54,6 +56,10 @@ def get_health_with_path(
     echo: str | None = Query(None, description="Optional echo string"),
 ):
     return make_health(echo=echo, path_echo=path_echo)
+
+# -----------------------------------------------------------------------------
+# Address endpoints
+# -----------------------------------------------------------------------------
 
 @app.post("/addresses", response_model=AddressRead, status_code=201)
 def create_address(address: AddressCreate):
@@ -159,12 +165,63 @@ def update_person(person_id: UUID, update: PersonUpdate):
     persons[person_id] = PersonRead(**stored)
     return persons[person_id]
 
+
+# -----------------------------------------------------------------------------
+# Meal Plan endpoints
+# -----------------------------------------------------------------------------
+
+@app.post("/mealplan", response_model=MealPlanRead, status_code=201)
+def create_meal_plan(meal_plan: MealPlanCreate):
+    if meal_plan.meal_plan_id in meal_plans:
+        raise HTTPException(status_code=400, detail="Meal Plan with this ID already exists")
+    meal_plans[meal_plan.meal_plan_id] = MealPlanRead(**meal_plan.model_dump())
+    return meal_plans[meal_plan.meal_plan_id]
+
+@app.get("/mealplan", response_model=List[MealPlanRead])
+def list_meal_plans(
+    name: Optional[str] = Query(None, description="Filter by meal plan name"),
+    type: Optional[str] = Query(None, description="Filter by meal plan type"),
+    cost: Optional[float] = Query(None, description="Filter by meal plan cost in USD"),
+    start_date: Optional[datetime] = Query(None, description="Filter by start date"),
+    end_date: Optional[datetime] = Query(None, description="Filter by end date"),
+    ):
+
+    results = list(meal_plans.values())
+
+    if name is not None:
+        results = [m for m in results if m.name == name]
+    if type is not None:
+        results = [m for m in results if m.type == type]
+    if cost is not None:
+        results = [m for m in results if m.cost == cost]
+    if start_date is not None:
+        results = [m for m in results if m.start_date == start_date]
+    if end_date is not None:
+        results = [m for m in results if m.end_date == end_date]
+
+    return results
+
+@app.get("/mealplan/{meal_plan_id}", response_model=MealPlanRead)
+def get_meal_plan(meal_plan_id: UUID):
+    if meal_plan_id not in meal_plans:
+        raise HTTPException(status_code=404, detail="Meal Plan not found")
+    return meal_plans[meal_plan_id]
+
+@app.patch("/mealplan/{meal_plan_id}", response_model=MealPlanRead)
+def update_meal_plan(meal_plan_id: UUID, update: MealPlanUpdate):
+    if meal_plan_id not in meal_plans:
+        raise HTTPException(status_code=404, detail="Meal Plan not found")
+    stored = meal_plans[meal_plan_id].model_dump()
+    stored.update(update.model_dump(exclude_unset=True))
+    meal_plans[meal_plan_id] = MealPlanRead(**stored)
+    return meal_plans[meal_plan_id]
+
 # -----------------------------------------------------------------------------
 # Root
 # -----------------------------------------------------------------------------
 @app.get("/")
 def root():
-    return {"message": "Welcome to the Person/Address API. See /docs for OpenAPI UI."}
+    return {"message": "Welcome to the Person/Address/Meal Plan API. See /docs for OpenAPI UI."}
 
 # -----------------------------------------------------------------------------
 # Entrypoint for `python main.py`
