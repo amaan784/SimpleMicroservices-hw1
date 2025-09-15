@@ -3,4 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (SimpleMicroservices)" />
   </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="cloud_computing_course_env" project-jdk-type="Python SDK" />
 </project>
