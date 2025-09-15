@@ -173,7 +173,7 @@ def update_person(person_id: UUID, update: PersonUpdate):
 # Meal Plan endpoints
 # -----------------------------------------------------------------------------
 
-@app.post("/mealplan", response_model=MealPlanRead, status_code=201)
+@app.post("/meal_plan", response_model=MealPlanRead, status_code=201)
 def create_meal_plan(meal_plan: MealPlanCreate):
     meal_plan_read = MealPlanRead(**meal_plan.model_dump())
     if meal_plan_read.meal_plan_id in meal_plans:
@@ -182,7 +182,7 @@ def create_meal_plan(meal_plan: MealPlanCreate):
     return meal_plan_read
 
 
-@app.get("/mealplan", response_model=List[MealPlanRead])
+@app.get("/meal_plan", response_model=List[MealPlanRead])
 def list_meal_plans(
     name: Optional[str] = Query(None, description="Filter by meal plan name"),
     type: Optional[str] = Query(None, description="Filter by meal plan type"),
@@ -191,7 +191,7 @@ def list_meal_plans(
     end_date: Optional[datetime] = Query(None, description="Filter by end date"),
     dining_location_name: Optional[str] = Query(None, description="Filter by name of at least one dining location"),
     dining_location_capacity: Optional[int] = Query(None, description="Filter by capacity of at least one dining location"),
-):
+    ):
     results = list(meal_plans.values())
 
     if name is not None:
@@ -214,14 +214,14 @@ def list_meal_plans(
     return results
 
 
-@app.get("/mealplan/{meal_plan_id}", response_model=MealPlanRead)
+@app.get("/meal_plan/{meal_plan_id}", response_model=MealPlanRead)
 def get_meal_plan(meal_plan_id: UUID):
     if meal_plan_id not in meal_plans:
         raise HTTPException(status_code=404, detail="Meal Plan not found")
     return meal_plans[meal_plan_id]
 
 
-@app.patch("/mealplan/{meal_plan_id}", response_model=MealPlanRead)
+@app.patch("/meal_plan/{meal_plan_id}", response_model=MealPlanRead)
 def update_meal_plan(meal_plan_id: UUID, update: MealPlanUpdate):
     if meal_plan_id not in meal_plans:
         raise HTTPException(status_code=404, detail="Meal Plan not found")
@@ -230,11 +230,19 @@ def update_meal_plan(meal_plan_id: UUID, update: MealPlanUpdate):
     meal_plans[meal_plan_id] = MealPlanRead(**stored)
     return meal_plans[meal_plan_id]
 
+@app.delete("/meal_plan/{meal_plan_id}")
+def delete_meal_plan(meal_plan_id: UUID):
+    if meal_plan_id not in meal_plans:
+        raise HTTPException(status_code=404, detail="Meal Plan not found")
+    del meal_plans[meal_plan_id]
+
+    return {"meal_plan_id": str(meal_plan_id),"message": "Removed meal plan successfully"}
+
 # -----------------------------------------------------------------------------
 # Dining Location endpoints
 # -----------------------------------------------------------------------------
 
-@app.post("/dining-location", response_model=DiningLocationRead, status_code=201)
+@app.post("/dining_location", response_model=DiningLocationRead, status_code=201)
 def create_dining_location(dining_location: DiningLocationCreate):
     if dining_location.dining_location_id in dining_locations:
         raise HTTPException(status_code=400, detail="Dining Location with this ID already exists")
@@ -242,7 +250,7 @@ def create_dining_location(dining_location: DiningLocationCreate):
     return dining_locations[dining_location.dining_location_id]
 
 
-@app.get("/dining-location", response_model=List[DiningLocationRead])
+@app.get("/dining_location", response_model=List[DiningLocationRead])
 def list_dining_locations(
     name: Optional[str] = Query(None, description="Filter by dining location name"),
     capacity: Optional[int] = Query(None, description="Filter by dining location capacity"),    
@@ -256,13 +264,13 @@ def list_dining_locations(
 
     return results
 
-@app.get("/dining-location/{dining_location_id}", response_model=DiningLocationRead)
+@app.get("/dining_location/{dining_location_id}", response_model=DiningLocationRead)
 def get_dining_location(dining_location_id: UUID):
     if dining_location_id not in dining_locations:
         raise HTTPException(status_code=404, detail="Dining Location not found")
     return dining_locations[dining_location_id]
 
-@app.patch("/dining-location/{dining_location_id}", response_model=DiningLocationRead)
+@app.patch("/dining_location/{dining_location_id}", response_model=DiningLocationRead)
 def update_dining_location(dining_location_id: UUID, update: DiningLocationUpdate):
     if dining_location_id not in dining_locations:
         raise HTTPException(status_code=404, detail="Dining Location not found")
@@ -271,6 +279,13 @@ def update_dining_location(dining_location_id: UUID, update: DiningLocationUpdat
     dining_locations[dining_location_id] = DiningLocationRead(**stored)
     return dining_locations[dining_location_id]
 
+@app.delete("/dining_location/{dining_location_id}")
+def delete_dining_location(dining_location_id: UUID):
+    if dining_location_id not in dining_locations:
+        raise HTTPException(status_code=404, detail="Dining Location not found")
+    del dining_locations[dining_location_id]
+
+    return {"dining_location_id": str(dining_location_id),"message": "Removed dining location successfully"}
 
 # -----------------------------------------------------------------------------
 # Root
