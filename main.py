@@ -29,7 +29,7 @@ dining_locations: Dict[UUID, DiningLocationRead] = {}
 
 # -----------------------------------------------------------------------------
 app = FastAPI(
-    title="Person, Address, Meal Plan API",
+    title="Person, Address, Meal Plan, Dining Location API",
     description="Demo FastAPI app using Pydantic v2 models for Person, Address, Meal Plan, Dining Location",
     version="0.1.0",
 )
